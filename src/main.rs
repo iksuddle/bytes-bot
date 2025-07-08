@@ -1,9 +1,9 @@
-use bytes::{ClientData, Database, commands};
+use bytes::{ClientData, Database, Error, commands};
 use poise::serenity_prelude as serenity;
 use serenity::all::GatewayIntents;
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>> {
+async fn main() -> Result<(), Error> {
     let db = Database::new()?;
 
     dotenv::dotenv().ok();
@@ -16,7 +16,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>
 
     let framework = poise::Framework::builder()
         .options(poise::FrameworkOptions {
-            // commands: vec![commands::byte()],
             commands: vec![commands::byte(), commands::info()],
             prefix_options: poise::PrefixFrameworkOptions {
                 prefix: Some("!".to_owned()),
