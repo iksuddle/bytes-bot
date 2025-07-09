@@ -17,12 +17,11 @@ pub struct User {
     id: DiscordId,
     guild_id: DiscordId,
     score: u32,
-    streak: u32,
 }
 
 pub struct Guild {
     id: DiscordId,
-    last_user_id: Option<DiscordId>,
+    last_user_id: DiscordId,
 }
 
 pub struct Database {
@@ -43,14 +42,13 @@ impl Database {
         conn.execute_batch(
             "CREATE TABLE IF NOT EXISTS guilds (
                 id           INTEGER PRIMARY KEY,
-                last_user_id INTEGER
+                last_user_id INTEGER NOT NULL
             ) STRICT;
 
             CREATE TABLE IF NOT EXISTS users (
                 id       INTEGER,
                 guild_id INTEGER,
                 score    INTEGER DEFAULT 1,
-                streak   INTEGER DEFAULT 1,
                 PRIMARY KEY (id, guild_id),
                 FOREIGN KEY (guild_id) REFERENCES guilds(id)
             ) STRICT;",
@@ -61,6 +59,28 @@ impl Database {
 
     fn get_pooled_connection(&self) -> r2d2::PooledConnection<SqliteConnectionManager> {
         self.pool.get().expect("error getting pool connection")
+    }
+    fn insert_guild(&self, id: DiscordId, user_id: DiscordId) -> Result<(), rusqlite::Error> {
+        let conn = self.get_pooled_connection();
+
+        conn.execute(
+            "INSERT OR IGNORE INTO guilds (id, last_user_id) VALUES (?1, ?2)",
+            params![id, user_id],
+        )?;
+
+        Ok(())
+    }
+
+    fn get_guild(&self, id: DiscordId) -> Result<Option<Guild>, rusqlite::Error> {
+        let conn = self.get_pooled_connection();
+
+        conn.query_one("SELECT * FROM guilds WHERE id = ?1", params![id], |row| {
+            Ok(Guild {
+                id: row.get(0)?,
+                last_user_id: row.get(1)?,
+            })
+        })
+        .optional()
     }
 
     fn insert_user(&self, user_id: DiscordId, guild_id: DiscordId) -> Result<(), rusqlite::Error> {
@@ -95,10 +115,44 @@ impl Database {
                     id: row.get(0)?,
                     guild_id: row.get(1)?,
                     score: row.get(2)?,
-                    streak: row.get(3)?,
                 })
             },
         )
         .optional()
+    }
+
+    fn update_user_score(
+        &self,
+        user_id: DiscordId,
+        guild_id: DiscordId,
+        new_score: u32,
+    ) -> Result<(), rusqlite::Error> {
+        let conn = self.get_pooled_connection();
+
+        conn.execute(
+            "UPDATE users
+            SET score = ?1
+            WHERE id = ?2 AND guild_id = ?3;",
+            params![new_score, user_id, guild_id],
+        )?;
+
+        Ok(())
+    }
+
+    fn update_last_user(
+        &self,
+        guild_id: DiscordId,
+        user_id: DiscordId,
+    ) -> Result<(), rusqlite::Error> {
+        let conn = self.get_pooled_connection();
+
+        conn.execute(
+            "UPDATE guilds
+            SET last_user_id = ?1
+            WHERE id = ?2;",
+            params![user_id, guild_id],
+        )?;
+
+        Ok(())
     }
 }
