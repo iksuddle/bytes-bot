@@ -1,4 +1,5 @@
-use serenity::all::User;
+use poise::CreateReply;
+use serenity::all::{Color, Colour, CreateEmbed, User};
 
 use crate::{Context, Error};
 
@@ -45,11 +46,9 @@ pub async fn byte(ctx: Context<'_>) -> Result<(), Error> {
 
             db.insert_user(user_id, guild_id)?;
 
-            ctx.say(format!(
-                "<@{}> grabbed a byte! They now have 1 byte.",
-                user_id,
-            ))
-            .await?;
+            let msg = format!("<@{}> grabbed a byte! They now have 1 byte.", user_id,);
+
+            ctx.send(create_embed_success(msg)).await?;
 
             return Ok(());
         }
@@ -69,11 +68,12 @@ pub async fn byte(ctx: Context<'_>) -> Result<(), Error> {
 
     db.update_last_user(guild_id, user_id)?;
 
-    ctx.say(format!(
+    let msg = format!(
         "<@{}> grabbed {} bytes! They now have {} bytes.",
         user_id, difference, new_score
-    ))
-    .await?;
+    );
+
+    ctx.send(create_embed_success(msg)).await?;
 
     Ok(())
 }
@@ -92,7 +92,8 @@ pub async fn info(ctx: Context<'_>, user: User) -> Result<(), Error> {
         None => "user not found".to_owned(),
     };
 
-    ctx.say(msg).await?;
+    ctx.send(create_embed("Info".to_owned(), msg, Colour::BLUE))
+        .await?;
 
     Ok(())
 }
@@ -107,8 +108,28 @@ pub async fn cooldown(ctx: Context<'_>, cooldown: Vec<String>) -> Result<(), Err
     let db = &ctx.data().db;
     db.update_cooldown(guild_id, d)?;
 
-    ctx.say(format!("cooldown updated to {} seconds.", d))
-        .await?;
+    ctx.send(create_embed_success(format!(
+        "cooldown updated to {} seconds!",
+        d
+    )))
+    .await?;
 
     Ok(())
+}
+
+fn create_embed(title: String, msg: String, colour: Colour) -> CreateReply {
+    CreateReply::default().embed(
+        CreateEmbed::new()
+            .title(title)
+            .description(msg)
+            .colour(colour),
+    )
+}
+
+fn create_embed_success(msg: String) -> CreateReply {
+    create_embed("Success!".to_owned(), msg, Colour::DARK_GREEN)
+}
+
+fn create_embed_failure(msg: String) -> CreateReply {
+    create_embed("Uh oh!".to_owned(), msg, Colour::DARK_RED)
 }

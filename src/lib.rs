@@ -64,6 +64,7 @@ impl Database {
     fn get_pooled_connection(&self) -> r2d2::PooledConnection<SqliteConnectionManager> {
         self.pool.get().expect("error getting pool connection")
     }
+
     fn insert_guild(&self, id: DiscordId, user_id: DiscordId) -> Result<(), rusqlite::Error> {
         let conn = self.get_pooled_connection();
 
