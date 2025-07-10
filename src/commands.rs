@@ -1,7 +1,6 @@
-use poise::CreateReply;
-use serenity::all::{Color, Colour, CreateEmbed, User};
+use serenity::all::{Colour, User};
 
-use crate::{Context, Error};
+use crate::{Context, Error, create_embed, create_embed_success};
 
 #[poise::command(slash_command, prefix_command)]
 pub async fn byte(ctx: Context<'_>) -> Result<(), Error> {
@@ -22,8 +21,10 @@ pub async fn byte(ctx: Context<'_>) -> Result<(), Error> {
     {
         let mut cooldown_tracker = ctx.command().cooldowns.lock().unwrap();
 
-        let mut cooldown_durations = poise::CooldownConfig::default();
-        cooldown_durations.guild = Some(std::time::Duration::from_secs(guild.cooldown));
+        let cooldown_durations = poise::CooldownConfig {
+            guild: Some(std::time::Duration::from_secs(guild.cooldown)),
+            ..Default::default()
+        };
 
         match cooldown_tracker.remaining_cooldown(ctx.cooldown_context(), &cooldown_durations) {
             Some(remaining) => {
@@ -115,21 +116,4 @@ pub async fn cooldown(ctx: Context<'_>, cooldown: Vec<String>) -> Result<(), Err
     .await?;
 
     Ok(())
-}
-
-fn create_embed(title: String, msg: String, colour: Colour) -> CreateReply {
-    CreateReply::default().embed(
-        CreateEmbed::new()
-            .title(title)
-            .description(msg)
-            .colour(colour),
-    )
-}
-
-fn create_embed_success(msg: String) -> CreateReply {
-    create_embed("Success!".to_owned(), msg, Colour::DARK_GREEN)
-}
-
-fn create_embed_failure(msg: String) -> CreateReply {
-    create_embed("Uh oh!".to_owned(), msg, Colour::DARK_RED)
 }

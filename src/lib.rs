@@ -1,7 +1,7 @@
+use poise::CreateReply;
 use r2d2_sqlite::SqliteConnectionManager;
 use rusqlite::{OptionalExtension, params};
-
-use crate::commands::cooldown;
+use serenity::all::{Colour, CreateEmbed};
 
 // todo: Database Connection is not Send or Sync use pool
 pub struct ClientData {
@@ -174,4 +174,21 @@ impl Database {
 
         Ok(())
     }
+}
+
+pub fn create_embed(title: String, msg: String, colour: Colour) -> CreateReply {
+    CreateReply::default().embed(
+        CreateEmbed::new()
+            .title(title)
+            .description(msg)
+            .colour(colour),
+    )
+}
+
+pub fn create_embed_success(msg: String) -> CreateReply {
+    create_embed("Success!".to_owned(), msg, Colour::DARK_GREEN)
+}
+
+pub fn create_embed_failure(msg: String) -> CreateReply {
+    create_embed("Uh oh!".to_owned(), msg, Colour::RED)
 }

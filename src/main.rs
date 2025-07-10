@@ -1,4 +1,4 @@
-use bytes::{ClientData, Database, Error, commands};
+use bytes::{ClientData, Database, Error, commands, create_embed_failure};
 use poise::serenity_prelude as serenity;
 use serenity::all::GatewayIntents;
 
@@ -22,6 +22,18 @@ async fn main() -> Result<(), Error> {
                 ..Default::default()
             },
             manual_cooldowns: true,
+            on_error: |err| {
+                Box::pin(async move {
+                    match err.ctx() {
+                        Some(ctx) => {
+                            ctx.send(create_embed_failure(err.to_string())).await.ok();
+                        }
+                        None => {
+                            println!("{}", err);
+                        }
+                    };
+                })
+            },
             ..Default::default()
         })
         .setup(|ctx, _ready, framework| {
