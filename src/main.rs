@@ -16,11 +16,12 @@ async fn main() -> Result<(), Error> {
 
     let framework = poise::Framework::builder()
         .options(poise::FrameworkOptions {
-            commands: vec![commands::byte(), commands::info()],
+            commands: vec![commands::byte(), commands::info(), commands::cooldown()],
             prefix_options: poise::PrefixFrameworkOptions {
                 prefix: Some("!".to_owned()),
                 ..Default::default()
             },
+            manual_cooldowns: true,
             ..Default::default()
         })
         .setup(|ctx, _ready, framework| {

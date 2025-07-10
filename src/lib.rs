@@ -1,6 +1,8 @@
 use r2d2_sqlite::SqliteConnectionManager;
 use rusqlite::{OptionalExtension, params};
 
+use crate::commands::cooldown;
+
 // todo: Database Connection is not Send or Sync use pool
 pub struct ClientData {
     pub db: Database,
@@ -22,6 +24,7 @@ pub struct User {
 pub struct Guild {
     id: DiscordId,
     last_user_id: DiscordId,
+    cooldown: u64,
 }
 
 pub struct Database {
@@ -42,7 +45,8 @@ impl Database {
         conn.execute_batch(
             "CREATE TABLE IF NOT EXISTS guilds (
                 id           INTEGER PRIMARY KEY,
-                last_user_id INTEGER NOT NULL
+                last_user_id INTEGER NOT NULL,
+                cooldown     INTEGER DEFAULT 3600
             ) STRICT;
 
             CREATE TABLE IF NOT EXISTS users (
@@ -78,6 +82,7 @@ impl Database {
             Ok(Guild {
                 id: row.get(0)?,
                 last_user_id: row.get(1)?,
+                cooldown: row.get(2)?,
             })
         })
         .optional()
@@ -151,6 +156,19 @@ impl Database {
             SET last_user_id = ?1
             WHERE id = ?2;",
             params![user_id, guild_id],
+        )?;
+
+        Ok(())
+    }
+
+    fn update_cooldown(&self, guild_id: DiscordId, cooldown: u64) -> Result<(), rusqlite::Error> {
+        let conn = self.get_pooled_connection();
+
+        conn.execute(
+            "UPDATE guilds
+            SET cooldown = ?1
+            WHERE id = ?2;",
+            params![cooldown, guild_id],
         )?;
 
         Ok(())
