@@ -29,7 +29,7 @@ async fn main() -> Result<(), Error> {
                             ctx.send(create_embed_failure(err.to_string())).await.ok();
                         }
                         None => {
-                            println!("{}", err);
+                            println!("{err}");
                         }
                     };
                 })

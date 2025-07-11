@@ -1,6 +1,8 @@
+use std::sync::atomic::AtomicU64;
+
 use serenity::all::{Colour, User};
 
-use crate::{Context, Error, create_embed, create_embed_success};
+use crate::{Context, Error, create_embed, create_embed_failure, create_embed_success};
 
 #[poise::command(slash_command, prefix_command)]
 pub async fn byte(ctx: Context<'_>) -> Result<(), Error> {
@@ -18,6 +20,8 @@ pub async fn byte(ctx: Context<'_>) -> Result<(), Error> {
     };
 
     // check cooldown
+    let remaining = AtomicU64::new(0);
+
     {
         let mut cooldown_tracker = ctx.command().cooldowns.lock().unwrap();
 
@@ -27,12 +31,19 @@ pub async fn byte(ctx: Context<'_>) -> Result<(), Error> {
         };
 
         match cooldown_tracker.remaining_cooldown(ctx.cooldown_context(), &cooldown_durations) {
-            Some(remaining) => {
-                return Err(format!("Please wait {} seconds", remaining.as_secs()).into());
+            Some(r) => {
+                remaining.store(r.as_secs(), std::sync::atomic::Ordering::Relaxed);
             }
             // todo: call start_cooldown after user grabs byte
             None => cooldown_tracker.start_cooldown(ctx.cooldown_context()),
         };
+    }
+
+    let r = remaining.load(std::sync::atomic::Ordering::Relaxed);
+    if r > 0 {
+        ctx.send(create_embed_failure(format!("Please wait {r} seconds!")))
+            .await?;
+        return Ok(());
     }
 
     let user = match db.get_user(user_id, guild_id)? {
@@ -47,7 +58,7 @@ pub async fn byte(ctx: Context<'_>) -> Result<(), Error> {
 
             db.insert_user(user_id, guild_id)?;
 
-            let msg = format!("<@{}> grabbed a byte! They now have 1 byte.", user_id,);
+            let msg = format!("<@{user_id}> grabbed a byte! They now have 1 byte.");
 
             ctx.send(create_embed_success(msg)).await?;
 
@@ -69,10 +80,7 @@ pub async fn byte(ctx: Context<'_>) -> Result<(), Error> {
 
     db.update_last_user(guild_id, user_id)?;
 
-    let msg = format!(
-        "<@{}> grabbed {} bytes! They now have {} bytes.",
-        user_id, difference, new_score
-    );
+    let msg = format!("<@{user_id}> grabbed {difference} bytes! They now have {new_score} bytes.");
 
     ctx.send(create_embed_success(msg)).await?;
 
@@ -110,8 +118,7 @@ pub async fn cooldown(ctx: Context<'_>, cooldown: Vec<String>) -> Result<(), Err
     db.update_cooldown(guild_id, d)?;
 
     ctx.send(create_embed_success(format!(
-        "cooldown updated to {} seconds!",
-        d
+        "cooldown updated to {d} seconds!"
     )))
     .await?;
 
