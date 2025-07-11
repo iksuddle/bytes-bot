@@ -8,7 +8,28 @@ pub struct ClientData {
     pub db: Database,
 }
 
-pub type Error = Box<dyn std::error::Error + Send + Sync>;
+#[derive(thiserror::Error, Debug)]
+pub enum Error {
+    #[error("database error")]
+    DbError(#[from] rusqlite::Error),
+    #[error("discord error")]
+    DiscordError(#[from] Box<serenity::Error>),
+    #[error("{0}")]
+    ByteError(String),
+}
+
+impl From<serenity::Error> for Error {
+    fn from(value: serenity::Error) -> Self {
+        Self::DiscordError(Box::new(value))
+    }
+}
+
+impl From<String> for Error {
+    fn from(value: String) -> Self {
+        Self::ByteError(value)
+    }
+}
+
 pub type Context<'a> = poise::Context<'a, ClientData, Error>;
 
 pub mod commands;
@@ -17,12 +38,12 @@ type DiscordId = u64;
 
 pub struct User {
     id: DiscordId,
-    guild_id: DiscordId,
+    _guild_id: DiscordId,
     score: u32,
 }
 
 pub struct Guild {
-    id: DiscordId,
+    _id: DiscordId,
     last_user_id: DiscordId,
     cooldown: u64,
 }
@@ -81,7 +102,7 @@ impl Database {
 
         conn.query_one("SELECT * FROM guilds WHERE id = ?1", params![id], |row| {
             Ok(Guild {
-                id: row.get(0)?,
+                _id: row.get(0)?,
                 last_user_id: row.get(1)?,
                 cooldown: row.get(2)?,
             })
@@ -119,7 +140,7 @@ impl Database {
             |row| {
                 Ok(User {
                     id: row.get(0)?,
-                    guild_id: row.get(1)?,
+                    _guild_id: row.get(1)?,
                     score: row.get(2)?,
                 })
             },

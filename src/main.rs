@@ -1,5 +1,5 @@
 use bytes::{ClientData, Database, Error, commands, create_embed_failure};
-use poise::serenity_prelude as serenity;
+use poise::{FrameworkError, serenity_prelude as serenity};
 use serenity::all::GatewayIntents;
 
 #[tokio::main]
@@ -16,7 +16,7 @@ async fn main() -> Result<(), Error> {
 
     let framework = poise::Framework::builder()
         .options(poise::FrameworkOptions {
-            commands: vec![commands::byte(), commands::info(), commands::cooldown()],
+            commands: vec![commands::info(), commands::cooldown(), commands::byte()],
             prefix_options: poise::PrefixFrameworkOptions {
                 prefix: Some("!".to_owned()),
                 ..Default::default()
@@ -24,22 +24,25 @@ async fn main() -> Result<(), Error> {
             manual_cooldowns: true,
             on_error: |err| {
                 Box::pin(async move {
-                    match err.ctx() {
-                        Some(ctx) => {
-                            ctx.send(create_embed_failure(err.to_string())).await.ok();
+                    match err {
+                        FrameworkError::Command { error, ctx, .. } => {
+                            let _ = ctx.send(create_embed_failure(error.to_string())).await;
                         }
-                        None => {
-                            println!("{err}");
+                        FrameworkError::ArgumentParse { error, ctx, .. } => {
+                            let _ = ctx.send(create_embed_failure(error.to_string())).await;
+                        }
+                        _ => {
+                            let _ = poise::builtins::on_error(err).await;
                         }
                     };
                 })
             },
             ..Default::default()
         })
-        .setup(|ctx, _ready, framework| {
+        .setup(|_ctx, _ready, _framework| {
             Box::pin(async move {
                 // register commands in all guilds
-                poise::builtins::register_globally(ctx, &framework.options().commands).await?;
+                // poise::builtins::register_globally(ctx, &[commands::byte()]).await?;
                 Ok(ClientData { db })
             })
         })
