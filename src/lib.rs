@@ -53,7 +53,7 @@ pub struct Database {
 
 impl Database {
     pub fn new() -> Result<Self, Error> {
-        let manager = SqliteConnectionManager::memory();
+        let manager = SqliteConnectionManager::file("bytes.db3");
         let pool = r2d2::Pool::new(manager).expect("error creating conn pool");
 
         let db = Self { pool };
@@ -194,9 +194,27 @@ impl Database {
 
         Ok(())
     }
+
+    fn get_leaderboard(&self, n: u32) -> Result<Vec<User>, rusqlite::Error> {
+        let conn = self.get_pooled_connection();
+
+        let mut stmt = conn.prepare("SELECT * FROM users ORDER BY score DESC LIMIT ?1")?;
+        let users: Vec<User> = stmt
+            .query_map(params![n], |row| {
+                Ok(User {
+                    id: row.get(0)?,
+                    _guild_id: row.get(1)?,
+                    score: row.get(2)?,
+                })
+            })?
+            .filter_map(Result::ok)
+            .collect();
+
+        Ok(users)
+    }
 }
 
-pub fn create_embed(title: String, msg: String, colour: Colour) -> CreateReply {
+pub fn create_embed_reply(title: String, msg: String, colour: Colour) -> CreateReply {
     CreateReply::default().embed(
         CreateEmbed::new()
             .title(title)
@@ -206,9 +224,9 @@ pub fn create_embed(title: String, msg: String, colour: Colour) -> CreateReply {
 }
 
 pub fn create_embed_success(msg: String) -> CreateReply {
-    create_embed("Success!".to_owned(), msg, Colour::DARK_GREEN)
+    create_embed_reply("Success!".to_owned(), msg, Colour::DARK_GREEN)
 }
 
 pub fn create_embed_failure(msg: String) -> CreateReply {
-    create_embed("Uh oh!".to_owned(), msg, Colour::RED)
+    create_embed_reply("Uh oh!".to_owned(), msg, Colour::RED)
 }

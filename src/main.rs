@@ -7,7 +7,6 @@ async fn main() -> Result<(), Error> {
     let db = Database::new()?;
 
     dotenv::dotenv().ok();
-
     let token = dotenv::var("DISCORD_TOKEN").expect("DISCORD_TOKEN not set");
 
     let intents = serenity::GatewayIntents::non_privileged()
@@ -16,7 +15,12 @@ async fn main() -> Result<(), Error> {
 
     let framework = poise::Framework::builder()
         .options(poise::FrameworkOptions {
-            commands: vec![commands::info(), commands::cooldown(), commands::byte()],
+            commands: vec![
+                commands::info(),
+                commands::cooldown(),
+                commands::byte(),
+                commands::leaderboard(),
+            ],
             prefix_options: poise::PrefixFrameworkOptions {
                 prefix: Some("!".to_owned()),
                 ..Default::default()

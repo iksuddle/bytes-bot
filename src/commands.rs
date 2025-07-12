@@ -1,6 +1,7 @@
-use serenity::all::{Colour, User};
+use poise::CreateReply;
+use serenity::all::{Colour, CreateEmbed, User};
 
-use crate::{Context, Error, create_embed, create_embed_success};
+use crate::{Context, Error, create_embed_reply, create_embed_success};
 
 #[poise::command(prefix_command)]
 pub async fn byte(ctx: Context<'_>) -> Result<(), Error> {
@@ -82,7 +83,7 @@ pub async fn info(ctx: Context<'_>, user: User) -> Result<(), Error> {
         None => format!("user <@{}> has no bytes...", user_id),
     };
 
-    ctx.send(create_embed("Info".to_owned(), msg, Colour::BLUE))
+    ctx.send(create_embed_reply("Info".to_owned(), msg, Colour::BLUE))
         .await?;
 
     Ok(())
@@ -91,20 +92,44 @@ pub async fn info(ctx: Context<'_>, user: User) -> Result<(), Error> {
 #[poise::command(prefix_command, required_permissions = "ADMINISTRATOR")]
 pub async fn cooldown(ctx: Context<'_>, cooldown: Vec<String>) -> Result<(), Error> {
     let d = duration_str::parse(cooldown.join(" "))?.as_secs();
-
     let guild_id = ctx
         .guild_id()
-        .ok_or("error: no guild in ctx".to_owned())?
+        .ok_or("no guild in context".to_owned())?
         .get();
 
-    // set server cooldown
     let db = &ctx.data().db;
+    if db.get_guild(guild_id)?.is_none() {
+        db.insert_guild(guild_id, 0)?;
+    }
+
     db.update_cooldown(guild_id, d)?;
 
     ctx.send(create_embed_success(format!(
         "cooldown updated to {d} seconds!"
     )))
     .await?;
+
+    Ok(())
+}
+
+#[poise::command(prefix_command)]
+pub async fn leaderboard(ctx: Context<'_>, n: Option<u32>) -> Result<(), Error> {
+    let db = &ctx.data().db;
+
+    let users = db.get_leaderboard(n.unwrap_or(10))?;
+
+    let mut content = String::new();
+
+    for (i, u) in users.iter().enumerate() {
+        content.push_str(format!("{}. <@{}> - {} bytes\n", i, u.id, u.score).as_str());
+    }
+
+    let lb_embed = CreateEmbed::new()
+        .title("Leaderboard")
+        .field(format!("Top {} members:", n.unwrap_or(10)), content, false)
+        .colour(Colour::DARK_GREEN);
+
+    ctx.send(CreateReply::default().embed(lb_embed)).await?;
 
     Ok(())
 }
