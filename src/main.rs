@@ -26,10 +26,10 @@ async fn main() -> Result<(), Error> {
                 Box::pin(async move {
                     match err {
                         FrameworkError::Command { error, ctx, .. } => {
-                            let _ = ctx.send(create_embed_failure(error.to_string())).await;
+                            ctx.send(create_embed_failure(error.to_string())).await.ok();
                         }
                         FrameworkError::ArgumentParse { error, ctx, .. } => {
-                            let _ = ctx.send(create_embed_failure(error.to_string())).await;
+                            ctx.send(create_embed_failure(error.to_string())).await.ok();
                         }
                         _ => {
                             let _ = poise::builtins::on_error(err).await;

@@ -3,10 +3,7 @@ use r2d2_sqlite::SqliteConnectionManager;
 use rusqlite::{OptionalExtension, params};
 use serenity::all::{Colour, CreateEmbed};
 
-// todo: Database Connection is not Send or Sync use pool
-pub struct ClientData {
-    pub db: Database,
-}
+pub mod commands;
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
@@ -30,12 +27,6 @@ impl From<String> for Error {
     }
 }
 
-pub type Context<'a> = poise::Context<'a, ClientData, Error>;
-
-pub mod commands;
-
-type DiscordId = u64;
-
 pub struct User {
     id: DiscordId,
     _guild_id: DiscordId,
@@ -47,6 +38,14 @@ pub struct Guild {
     last_user_id: DiscordId,
     cooldown: u64,
 }
+
+pub struct ClientData {
+    pub db: Database,
+}
+
+pub type Context<'a> = poise::Context<'a, ClientData, Error>;
+
+type DiscordId = u64;
 
 pub struct Database {
     pool: r2d2::Pool<SqliteConnectionManager>,
