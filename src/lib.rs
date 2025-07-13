@@ -214,6 +214,14 @@ impl Database {
     }
 }
 
+pub fn create_embed_success(msg: String) -> CreateReply {
+    create_embed_reply("Success!".to_owned(), msg, Colour::DARK_GREEN)
+}
+
+pub fn create_embed_failure(msg: String) -> CreateReply {
+    create_embed_reply("Uh oh!".to_owned(), msg, Colour::RED)
+}
+
 pub fn create_embed_reply(title: String, msg: String, colour: Colour) -> CreateReply {
     CreateReply::default().embed(
         CreateEmbed::new()
@@ -221,12 +229,4 @@ pub fn create_embed_reply(title: String, msg: String, colour: Colour) -> CreateR
             .description(msg)
             .colour(colour),
     )
-}
-
-pub fn create_embed_success(msg: String) -> CreateReply {
-    create_embed_reply("Success!".to_owned(), msg, Colour::DARK_GREEN)
-}
-
-pub fn create_embed_failure(msg: String) -> CreateReply {
-    create_embed_reply("Uh oh!".to_owned(), msg, Colour::RED)
 }

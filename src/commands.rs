@@ -3,6 +3,7 @@ use serenity::all::{Colour, CreateEmbed, User};
 
 use crate::{Context, Error, create_embed_reply, create_embed_success};
 
+/// Grab a byte!
 #[poise::command(prefix_command)]
 pub async fn byte(ctx: Context<'_>) -> Result<(), Error> {
     let db = &ctx.data().db;
@@ -69,11 +70,17 @@ pub async fn byte(ctx: Context<'_>) -> Result<(), Error> {
     Ok(())
 }
 
+/// Check how many bytes other members have.
 #[poise::command(prefix_command)]
-pub async fn info(ctx: Context<'_>, user: User) -> Result<(), Error> {
+pub async fn info(
+    ctx: Context<'_>,
+    #[description = "the member in question"] member: Option<User>,
+) -> Result<(), Error> {
     let db = &ctx.data().db;
 
-    let user_id = user.id.get();
+    let member = member.unwrap_or(ctx.author().to_owned());
+
+    let user_id = member.id.get();
     let guild_id = ctx.guild_id().expect("error: no guild in ctx").get();
 
     let user = db.get_user(user_id, guild_id)?;
@@ -89,8 +96,12 @@ pub async fn info(ctx: Context<'_>, user: User) -> Result<(), Error> {
     Ok(())
 }
 
+/// Change the byte cooldown for the server.
 #[poise::command(prefix_command, required_permissions = "ADMINISTRATOR")]
-pub async fn cooldown(ctx: Context<'_>, cooldown: Vec<String>) -> Result<(), Error> {
+pub async fn cooldown(
+    ctx: Context<'_>,
+    #[description = "the new cooldown time"] cooldown: Vec<String>,
+) -> Result<(), Error> {
     let d = duration_str::parse(cooldown.join(" "))?.as_secs();
     let guild_id = ctx
         .guild_id()
@@ -112,8 +123,12 @@ pub async fn cooldown(ctx: Context<'_>, cooldown: Vec<String>) -> Result<(), Err
     Ok(())
 }
 
-#[poise::command(prefix_command)]
-pub async fn leaderboard(ctx: Context<'_>, n: Option<u32>) -> Result<(), Error> {
+/// Display's the guild leaderboard
+#[poise::command(prefix_command, aliases("lb"))]
+pub async fn leaderboard(
+    ctx: Context<'_>,
+    #[description = "number of entries to show"] n: Option<u32>,
+) -> Result<(), Error> {
     let db = &ctx.data().db;
 
     let users = db.get_leaderboard(n.unwrap_or(10))?;
@@ -131,5 +146,20 @@ pub async fn leaderboard(ctx: Context<'_>, n: Option<u32>) -> Result<(), Error> 
 
     ctx.send(CreateReply::default().embed(lb_embed)).await?;
 
+    Ok(())
+}
+
+/// Show this help menu.
+#[poise::command(prefix_command)]
+pub async fn help(
+    ctx: Context<'_>,
+    #[description = "specific command to show help about"] command: Option<String>,
+) -> Result<(), Error> {
+    let config = poise::builtins::HelpConfiguration {
+        extra_text_at_bottom: "Provide a command name to view more info.
+You can edit your message to the bot and the bot will edit its response.",
+        ..Default::default()
+    };
+    poise::builtins::help(ctx, command.as_deref(), config).await?;
     Ok(())
 }
