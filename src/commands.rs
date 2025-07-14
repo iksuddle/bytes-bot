@@ -177,3 +177,48 @@ You can edit your message to the bot and the bot will edit its response.",
 
     Ok(())
 }
+
+// /// Set the byte master role.
+// #[poise::command(prefix_command)]
+// pub async fn role(
+//     ctx: Context<'_>,
+//     #[description = "The role to set for the byte master"] role: Option<Role>,
+// ) -> Result<(), Error> {
+//     let db = &ctx.data().db;
+//
+//     let guild_id = ctx.guild_id().expect("error: no guild in ctx").get();
+//
+//     let guild = match db.get_guild(guild_id)? {
+//         Some(g) => g,
+//         None => {
+//             db.insert_guild(guild_id, 0)?;
+//             db.get_guild(guild_id)?.unwrap()
+//         }
+//     };
+//
+//     let role_id = match role {
+//         Some(r) => r.id.get(),
+//         None => {
+//             if let Some(id) = guild.master_role {
+//                 let msg = format!("Byte master role is currently <@&{}>", id);
+//                 let embed = create_embed_success(msg);
+//                 ctx.send(embed).await?;
+//             } else {
+//                 let msg =
+//                     format!("Byte master role not set for this server. Provide a role to set it.");
+//                 let embed = create_embed_failure(msg);
+//                 ctx.send(embed).await?;
+//             }
+//             return Ok(());
+//         }
+//     };
+//
+//     db.update_role(guild_id, role_id)?;
+//
+//     let msg = format!("Byte master role updated to <@&{}>", role_id);
+//     let embed = create_embed_success(msg);
+//
+//     ctx.send(embed).await?;
+//
+//     Ok(())
+// }

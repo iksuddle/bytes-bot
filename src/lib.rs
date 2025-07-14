@@ -64,9 +64,9 @@ impl Database {
 
         conn.execute_batch(
             "CREATE TABLE IF NOT EXISTS guilds (
-                id           INTEGER PRIMARY KEY,
-                last_user_id INTEGER NOT NULL,
-                cooldown     INTEGER DEFAULT 3600
+                id             INTEGER PRIMARY KEY,
+                last_user_id   INTEGER NOT NULL,
+                cooldown       INTEGER DEFAULT 3600
             ) STRICT;
 
             CREATE TABLE IF NOT EXISTS users (
@@ -194,6 +194,19 @@ impl Database {
 
         Ok(())
     }
+
+    // fn update_role(&self, guild_id: DiscordId, role_id: DiscordId) -> Result<(), rusqlite::Error> {
+    //     let conn = self.get_pooled_connection();
+    //
+    //     conn.execute(
+    //         "UPDATE guilds
+    //         SET master_role = ?1
+    //         WHERE id = ?2;",
+    //         params![role_id, guild_id],
+    //     )?;
+    //
+    //     Ok(())
+    // }
 
     fn get_leaderboard(&self, n: u32) -> Result<Vec<User>, rusqlite::Error> {
         let conn = self.get_pooled_connection();
