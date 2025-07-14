@@ -33,7 +33,20 @@ pub async fn byte(ctx: Context<'_>) -> Result<(), Error> {
 
         match cooldown_tracker.remaining_cooldown(ctx.cooldown_context(), &cooldown_durations) {
             Some(remaining) => {
-                return Err(format!("Please wait {} seconds", remaining.as_secs()).into());
+                let total_seconds = remaining.as_secs();
+                let minutes = total_seconds / 60;
+                let seconds = total_seconds % 60;
+
+                let msg = match minutes {
+                    0 => format!("Please wait **{} seconds**", seconds),
+                    1 => format!("Please wait **1 minute and {} seconds**", seconds),
+                    _ => format!(
+                        "Please wait **{} minutes and {} seconds**",
+                        minutes, seconds
+                    ),
+                };
+
+                return Err(msg.into());
             }
             None => cooldown_tracker.start_cooldown(ctx.cooldown_context()),
         }
