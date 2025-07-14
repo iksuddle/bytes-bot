@@ -1,13 +1,16 @@
-use bytes::{ClientData, Database, Error, commands, create_embed_failure};
+use bytes_bot::{ClientData, Database, commands, create_embed_failure};
 use poise::{FrameworkError, serenity_prelude as serenity};
 use serenity::all::GatewayIntents;
+use shuttle_runtime::SecretStore;
+use shuttle_serenity::ShuttleSerenity;
 
-#[tokio::main]
-async fn main() -> Result<(), Error> {
-    let db = Database::new()?;
+#[shuttle_runtime::main]
+async fn main(#[shuttle_runtime::Secrets] secret_store: SecretStore) -> ShuttleSerenity {
+    let db = Database::new().expect("error creating db");
 
-    dotenv::dotenv().ok();
-    let token = dotenv::var("DISCORD_TOKEN").expect("DISCORD_TOKEN not set");
+    let token = secret_store
+        .get("DISCORD_TOKEN")
+        .expect("DISCORD_TOKEN not set in secrets file");
 
     let intents = serenity::GatewayIntents::non_privileged()
         | GatewayIntents::GUILD_MESSAGES
@@ -55,8 +58,8 @@ async fn main() -> Result<(), Error> {
 
     let client = serenity::ClientBuilder::new(token, intents)
         .framework(framework)
-        .await;
-    client.unwrap().start().await.unwrap();
+        .await
+        .map_err(shuttle_runtime::CustomError::new)?;
 
-    Ok(())
+    Ok(client.into())
 }

@@ -1,3 +1,5 @@
 /target
-.env
 *.db3
+Secrets.toml
+.shuttle*
+Secrets*.toml

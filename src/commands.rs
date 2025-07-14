@@ -161,5 +161,6 @@ You can edit your message to the bot and the bot will edit its response.",
         ..Default::default()
     };
     poise::builtins::help(ctx, command.as_deref(), config).await?;
+
     Ok(())
 }
