@@ -1,5 +1,5 @@
 use poise::CreateReply;
-use serenity::all::{Colour, CreateEmbed, User};
+use serenity::all::{Colour, CreateEmbed, Role, User};
 
 use crate::{Context, Error, create_embed_reply, create_embed_success};
 
@@ -9,10 +9,7 @@ pub async fn byte(ctx: Context<'_>) -> Result<(), Error> {
     let db = &ctx.data().db;
 
     let user_id = ctx.author().id.get();
-    let guild_id = ctx
-        .guild_id()
-        .ok_or("error: no guild in ctx".to_owned())?
-        .get();
+    let guild_id = ctx.guild_id().ok_or("error: no guild in ctx")?.get();
 
     let guild = match db.get_guild(guild_id)? {
         Some(g) => g,
@@ -67,7 +64,7 @@ pub async fn byte(ctx: Context<'_>) -> Result<(), Error> {
     };
 
     let difference = if user.id == guild.last_user_id {
-        user.score * 2
+        user.score
     } else {
         1
     };
@@ -79,6 +76,18 @@ pub async fn byte(ctx: Context<'_>) -> Result<(), Error> {
     let msg = format!("<@{user_id}> grabbed {difference} bytes! They now have {new_score} bytes.");
 
     ctx.send(create_embed_success(msg)).await?;
+
+    // update byte master
+    if let Some(role_id) = guild.master_role_id {
+        if let Some(leader) = db.get_leaderboard(1)?.first() {
+            if leader.id == user_id {
+                let g = ctx.partial_guild().await.unwrap();
+                let member = g.member(ctx, user_id).await?;
+                member.add_role(ctx, role_id).await?;
+            }
+        }
+    }
+    // todo: remove old byte master
 
     Ok(())
 }
@@ -116,10 +125,7 @@ pub async fn cooldown(
     #[description = "the new cooldown time"] cooldown: Vec<String>,
 ) -> Result<(), Error> {
     let d = duration_str::parse(cooldown.join(" "))?.as_secs();
-    let guild_id = ctx
-        .guild_id()
-        .ok_or("no guild in context".to_owned())?
-        .get();
+    let guild_id = ctx.guild_id().ok_or("no guild in context")?.get();
 
     let db = &ctx.data().db;
     if db.get_guild(guild_id)?.is_none() {
@@ -178,47 +184,23 @@ You can edit your message to the bot and the bot will edit its response.",
     Ok(())
 }
 
-// /// Set the byte master role.
-// #[poise::command(prefix_command)]
-// pub async fn role(
-//     ctx: Context<'_>,
-//     #[description = "The role to set for the byte master"] role: Option<Role>,
-// ) -> Result<(), Error> {
-//     let db = &ctx.data().db;
-//
-//     let guild_id = ctx.guild_id().expect("error: no guild in ctx").get();
-//
-//     let guild = match db.get_guild(guild_id)? {
-//         Some(g) => g,
-//         None => {
-//             db.insert_guild(guild_id, 0)?;
-//             db.get_guild(guild_id)?.unwrap()
-//         }
-//     };
-//
-//     let role_id = match role {
-//         Some(r) => r.id.get(),
-//         None => {
-//             if let Some(id) = guild.master_role {
-//                 let msg = format!("Byte master role is currently <@&{}>", id);
-//                 let embed = create_embed_success(msg);
-//                 ctx.send(embed).await?;
-//             } else {
-//                 let msg =
-//                     format!("Byte master role not set for this server. Provide a role to set it.");
-//                 let embed = create_embed_failure(msg);
-//                 ctx.send(embed).await?;
-//             }
-//             return Ok(());
-//         }
-//     };
-//
-//     db.update_role(guild_id, role_id)?;
-//
-//     let msg = format!("Byte master role updated to <@&{}>", role_id);
-//     let embed = create_embed_success(msg);
-//
-//     ctx.send(embed).await?;
-//
-//     Ok(())
-// }
+#[poise::command(prefix_command, required_permissions = "ADMINISTRATOR")]
+pub async fn role(ctx: Context<'_>, role: Role) -> Result<(), Error> {
+    let db = &ctx.data().db;
+
+    let guild_id = ctx.guild().ok_or("no guild in context")?.id.get();
+
+    if db.get_guild(guild_id)?.is_none() {
+        db.insert_guild(guild_id, ctx.author().id.get())?;
+    }
+
+    db.update_master_role(guild_id, role.id.get())?;
+
+    let embed = create_embed_success(format!(
+        "Updated this server's byte master role to <@&{}>",
+        role.id
+    ));
+    ctx.send(embed).await?;
+
+    Ok(())
+}

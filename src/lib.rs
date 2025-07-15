@@ -27,6 +27,12 @@ impl From<String> for Error {
     }
 }
 
+impl From<&'static str> for Error {
+    fn from(value: &'static str) -> Self {
+        Self::ByteError(value.to_owned())
+    }
+}
+
 pub struct User {
     id: DiscordId,
     _guild_id: DiscordId,
@@ -37,6 +43,7 @@ pub struct Guild {
     _id: DiscordId,
     last_user_id: DiscordId,
     cooldown: u64,
+    master_role_id: Option<DiscordId>,
 }
 
 pub struct ClientData {
@@ -66,7 +73,8 @@ impl Database {
             "CREATE TABLE IF NOT EXISTS guilds (
                 id             INTEGER PRIMARY KEY,
                 last_user_id   INTEGER NOT NULL,
-                cooldown       INTEGER DEFAULT 3600
+                cooldown       INTEGER DEFAULT 3600,
+                master_role_id INTEGER
             ) STRICT;
 
             CREATE TABLE IF NOT EXISTS users (
@@ -96,19 +104,6 @@ impl Database {
         Ok(())
     }
 
-    fn get_guild(&self, id: DiscordId) -> Result<Option<Guild>, rusqlite::Error> {
-        let conn = self.get_pooled_connection();
-
-        conn.query_one("SELECT * FROM guilds WHERE id = ?1", params![id], |row| {
-            Ok(Guild {
-                _id: row.get(0)?,
-                last_user_id: row.get(1)?,
-                cooldown: row.get(2)?,
-            })
-        })
-        .optional()
-    }
-
     fn insert_user(&self, user_id: DiscordId, guild_id: DiscordId) -> Result<(), rusqlite::Error> {
         let conn = self.get_pooled_connection();
 
@@ -124,6 +119,20 @@ impl Database {
         )?;
 
         Ok(())
+    }
+
+    fn get_guild(&self, id: DiscordId) -> Result<Option<Guild>, rusqlite::Error> {
+        let conn = self.get_pooled_connection();
+
+        conn.query_one("SELECT * FROM guilds WHERE id = ?1", params![id], |row| {
+            Ok(Guild {
+                _id: row.get(0)?,
+                last_user_id: row.get(1)?,
+                cooldown: row.get(2)?,
+                master_role_id: row.get(3)?,
+            })
+        })
+        .optional()
     }
 
     fn get_user(
@@ -195,18 +204,22 @@ impl Database {
         Ok(())
     }
 
-    // fn update_role(&self, guild_id: DiscordId, role_id: DiscordId) -> Result<(), rusqlite::Error> {
-    //     let conn = self.get_pooled_connection();
-    //
-    //     conn.execute(
-    //         "UPDATE guilds
-    //         SET master_role = ?1
-    //         WHERE id = ?2;",
-    //         params![role_id, guild_id],
-    //     )?;
-    //
-    //     Ok(())
-    // }
+    fn update_master_role(
+        &self,
+        guild_id: DiscordId,
+        role_id: DiscordId,
+    ) -> Result<(), rusqlite::Error> {
+        let conn = self.get_pooled_connection();
+
+        conn.execute(
+            "UPDATE guilds
+            SET master_role_id = ?1
+            WHERE id = ?2;",
+            params![role_id, guild_id],
+        )?;
+
+        Ok(())
+    }
 
     fn get_leaderboard(&self, n: u32) -> Result<Vec<User>, rusqlite::Error> {
         let conn = self.get_pooled_connection();
