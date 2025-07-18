@@ -241,12 +241,13 @@ impl Database {
         Ok(())
     }
 
-    fn get_leaderboard(&self, n: u32) -> Result<Vec<User>, rusqlite::Error> {
+    fn get_leaderboard(&self, guild_id: DiscordId, n: u32) -> Result<Vec<User>, rusqlite::Error> {
         let conn = self.get_pooled_connection();
 
-        let mut stmt = conn.prepare("SELECT * FROM users ORDER BY score DESC LIMIT ?1")?;
+        let mut stmt =
+            conn.prepare("SELECT * FROM users WHERE guild_id = ?1 ORDER BY score DESC LIMIT ?2")?;
         let users: Vec<User> = stmt
-            .query_map(params![n], |row| {
+            .query_map(params![guild_id, n], |row| {
                 Ok(User {
                     id: row.get(0)?,
                     _guild_id: row.get(1)?,

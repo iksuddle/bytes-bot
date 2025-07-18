@@ -79,7 +79,7 @@ pub async fn byte(ctx: Context<'_>) -> Result<(), Error> {
 
     if let Some(role_id) = guild.master_role_id {
         // update byte master
-        if let Some(leader) = db.get_leaderboard(1)?.first() {
+        if let Some(leader) = db.get_leaderboard(guild_id, 1)?.first() {
             if leader.id == user_id {
                 // add role for new master
                 let g = ctx.partial_guild().await.unwrap();
@@ -159,7 +159,9 @@ pub async fn leaderboard(
 ) -> Result<(), Error> {
     let db = &ctx.data().db;
 
-    let users = db.get_leaderboard(n.unwrap_or(10))?;
+    let guild_id = ctx.guild().ok_or("no guild in context")?.id.get();
+
+    let users = db.get_leaderboard(guild_id, n.unwrap_or(10))?;
 
     let mut content = String::new();
 
