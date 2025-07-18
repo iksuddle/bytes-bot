@@ -27,7 +27,7 @@ async fn main(#[shuttle_runtime::Secrets] secret_store: SecretStore) -> ShuttleS
                 commands::role(),
             ],
             prefix_options: poise::PrefixFrameworkOptions {
-                prefix: Some("!".to_owned()),
+                prefix: Some("%".to_owned()),
                 ..Default::default()
             },
             manual_cooldowns: true,
