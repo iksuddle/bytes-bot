@@ -77,17 +77,26 @@ pub async fn byte(ctx: Context<'_>) -> Result<(), Error> {
 
     ctx.send(create_embed_success(msg)).await?;
 
-    // update byte master
     if let Some(role_id) = guild.master_role_id {
+        // update byte master
         if let Some(leader) = db.get_leaderboard(1)?.first() {
             if leader.id == user_id {
+                // add role for new master
                 let g = ctx.partial_guild().await.unwrap();
-                let member = g.member(ctx, user_id).await?;
+                let member = g.member(ctx, leader.id).await?;
                 member.add_role(ctx, role_id).await?;
+
+                // remove role from previous master
+                if let Some(last_master_id) = guild.last_master_id {
+                    let member = g.member(ctx, last_master_id).await?;
+                    member.remove_role(ctx, role_id).await?;
+                }
+
+                // update last master id
+                db.update_last_master(guild.id, leader.id)?;
             }
         }
     }
-    // todo: remove old byte master
 
     Ok(())
 }

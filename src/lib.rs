@@ -40,10 +40,11 @@ pub struct User {
 }
 
 pub struct Guild {
-    _id: DiscordId,
+    id: DiscordId,
     last_user_id: DiscordId,
     cooldown: u64,
     master_role_id: Option<DiscordId>,
+    last_master_id: Option<DiscordId>,
 }
 
 pub struct ClientData {
@@ -74,7 +75,8 @@ impl Database {
                 id             INTEGER PRIMARY KEY,
                 last_user_id   INTEGER NOT NULL,
                 cooldown       INTEGER DEFAULT 3600,
-                master_role_id INTEGER
+                master_role_id INTEGER,
+                last_master_id INTEGER
             ) STRICT;
 
             CREATE TABLE IF NOT EXISTS users (
@@ -126,10 +128,11 @@ impl Database {
 
         conn.query_one("SELECT * FROM guilds WHERE id = ?1", params![id], |row| {
             Ok(Guild {
-                _id: row.get(0)?,
+                id: row.get(0)?,
                 last_user_id: row.get(1)?,
                 cooldown: row.get(2)?,
                 master_role_id: row.get(3)?,
+                last_master_id: row.get(4)?,
             })
         })
         .optional()
@@ -169,6 +172,23 @@ impl Database {
             SET score = ?1
             WHERE id = ?2 AND guild_id = ?3;",
             params![new_score, user_id, guild_id],
+        )?;
+
+        Ok(())
+    }
+
+    fn update_last_master(
+        &self,
+        guild_id: DiscordId,
+        user_id: DiscordId,
+    ) -> Result<(), rusqlite::Error> {
+        let conn = self.get_pooled_connection();
+
+        conn.execute(
+            "UPDATE guilds
+            SET last_master_id = ?1
+            WHERE id = ?2;",
+            params![user_id, guild_id],
         )?;
 
         Ok(())
