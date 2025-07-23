@@ -9,7 +9,7 @@ pub mod commands;
 pub enum Error {
     #[error("database error")]
     DbError(#[from] rusqlite::Error),
-    #[error("discord error")]
+    #[error("discord error: {0}")]
     DiscordError(#[from] Box<serenity::Error>),
     #[error("{0}")]
     ByteError(String),

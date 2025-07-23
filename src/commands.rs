@@ -88,8 +88,10 @@ pub async fn byte(ctx: Context<'_>) -> Result<(), Error> {
 
                 // remove role from previous master
                 if let Some(last_master_id) = guild.last_master_id {
-                    let member = g.member(ctx, last_master_id).await?;
-                    member.remove_role(ctx, role_id).await?;
+                    if last_master_id != user_id {
+                        let member = g.member(ctx, last_master_id).await?;
+                        member.remove_role(ctx, role_id).await?;
+                    }
                 }
 
                 // update last master id
